@@ -20,27 +20,44 @@ func StartBot(token string, poems []models.Poem) {
 	if err != nil {
 		log.Panic(err)
 	}
+
 	for update := range updates {
-		if update.Message == nil {
-			continue
-		}
-		chatID := update.Message.Chat.ID
-		text := update.Message.Text
+		if update.Message != nil {
+			chatID := update.Message.Chat.ID
+			text := update.Message.Text
+			switch text {
+			case "/start":
+				SendMenu(bot, int(chatID))
+			case "فال جدید":
+				poem := GetRandomPoem(poems)
+				response := fmt.Sprintf("📜 *فال:*\n\n_%s_\n\n💡 *تفصیر:* %s", poem.Text, poem.Interpretation)
+				msg := tgbotapi.NewMessage(chatID, response)
+				msg.ParseMode = tgbotapi.ModeMarkdown
+				bot.Send(msg)
+			case "درباره ما":
+				msg := tgbotapi.NewMessage(chatID, "about")
+				msg.ParseMode = tgbotapi.ModeMarkdown
+				bot.Send(msg)
+			default:
+				msg := tgbotapi.NewMessage(chatID, "I didn't understand that. Please use the menu below.")
+				bot.Send(msg)
+				SendMenu(bot, int(chatID))
 
-		if text == "/start" {
-			msg := tgbotapi.NewMessage(chatID, "به ربات فال حافط خوش آمدید")
-			bot.Send(msg)
-		} else if text == "/faal" {
-			poem := GetRandomPoem(poems)
-			response := fmt.Sprintf("📜 *فال:*\n\n_%s_\n\n💡 *تفصیر:* %s", poem.Text, poem.Interpretation)
-			msg := tgbotapi.NewMessage(chatID, response)
-			msg.ParseMode = tgbotapi.ModeMarkdown
-			bot.Send(msg)
-
-		} else {
-			msg := tgbotapi.NewMessage(chatID, "لطفا برای فال گرفتن /faal را بزنید")
-			msg.ParseMode = tgbotapi.ModeMarkdown
-			bot.Send(msg)
+			}
+		} else if update.CallbackQuery != nil {
+			chatID := update.CallbackQuery.Message.Chat.ID
+			data := update.CallbackQuery.Data
+			if data == "get_poem" {
+				poem := GetRandomPoem(poems)
+				response := fmt.Sprintf("📜 *فال:*\n\n_%s_\n\n💡 *تفسیر:* %s", poem.Text, poem.Interpretation)
+				msg := tgbotapi.NewMessage(chatID, response)
+				msg.ParseMode = "Markdown"
+				bot.Send(msg)
+			} else if data == "about" {
+				msg := tgbotapi.NewMessage(chatID, "about")
+				msg.ParseMode = tgbotapi.ModeMarkdown
+				bot.Send(msg)
+			}
 		}
 	}
 }
